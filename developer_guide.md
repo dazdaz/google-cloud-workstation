@@ -31,7 +31,7 @@ This project provides shell scripts to manage Google Cloud Workstations from the
 | Cluster | `ws-cluster` |
 | Configuration | `wks-config` |
 | Region | `europe-west1` |
-| Image | `europe-west1-docker.pkg.dev/daev-playground/workstations/custom-workstation:v1.0.6` |
+| Image | `europe-west1-docker.pkg.dev/daev-playground/workstations/custom-workstation:v2.7.0` |
 | URL | https://wks1.cluster-uotzpoq77bccaumf6gy3xw6r6i.cloudworkstations.dev |
 
 ---
@@ -53,11 +53,13 @@ This project provides shell scripts to manage Google Cloud Workstations from the
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Google Cloud                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│  Cloud Build         - Builds container images with Kaniko      │
+│  Cloud Build         - Builds container images with Docker      │
 │  Artifact Registry   - Stores custom container images           │
 │  Cloud Workstations  - Runs workstation VMs                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+> **Important**: We use `gcr.io/cloud-builders/docker` instead of Kaniko. See [Critical: Kaniko Breaks SSH](#7-critical-kaniko-breaks-ssh) for details.
 
 ---
 
@@ -304,19 +306,85 @@ gcloud workstations configs update wks-config \
     --service-account=PROJECT_NUMBER-compute@developer.gserviceaccount.com
 ```
 
-### 5. Kaniko vs Docker Build
+### 5. USER Switching Breaks SSH (Critical)
 
-**Problem**: Cloud Build uses Kaniko, which has different behavior than Docker:
+**Problem**: Using `USER root` / `USER 1000` or `USER user` in Dockerfiles breaks SSH access to Cloud Workstations. This occurs because switching users affects the runtime context that the workstation startup scripts rely on.
+
+**Symptom**: After workstation restart, SSH fails with "No server running on port 22" or "Connection reset by peer".
+
+**Solution**: Use `sudo` for privileged commands instead of USER switching:
+
+```dockerfile
+# ✅ CORRECT - use sudo for privileged commands
+FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
+
+RUN sudo apt-get update && sudo apt-get install -y package
+RUN sudo curl -LO https://example.com/tool && sudo mv tool /usr/local/bin/
+
+# ❌ WRONG - breaks SSH
+FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
+
+USER root
+RUN apt-get update && apt-get install -y package
+USER 1000
+```
+
+### 6. Docker Builder vs Kaniko
+
+**Problem**: Cloud Build historically used Kaniko, which has different behavior than Docker:
 - Heredoc syntax (`cat <<'EOF'`) may not work correctly
-- `USER username` directive fails (use numeric UID instead)
 - `images:` section in cloudbuild.yaml causes verification failures (Kaniko already pushes)
 
 **Solution**:
 - Use `COPY` instead of generating scripts inline
-- Use `USER 1000` instead of `USER user`
 - Remove `images:` section from Cloud Build config
 
-### 6. Cloud Build Machine Type
+### 7. Critical: Kaniko Breaks SSH
+
+**Problem**: Kaniko does NOT properly preserve ENTRYPOINT/CMD metadata from complex base images like Cloud Workstations images. Even an ultra-minimal Dockerfile with just a `FROM` line fails when built with Kaniko.
+
+**Symptom**: SSH always fails with "No server running on port 22" for ANY Kaniko-built image, regardless of Dockerfile content.
+
+**Root Cause**: Cloud Workstations base images have complex startup mechanisms (ENTRYPOINT/CMD/scripts) that Kaniko doesn't properly copy to the output image.
+
+**Solution**: Use Docker builder instead of Kaniko in Cloud Build:
+
+```yaml
+# ✅ CORRECT - Docker builder preserves image metadata
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile'
+      - '-t'
+      - 'REGISTRY/IMAGE:TAG'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'REGISTRY/IMAGE:TAG'
+
+# ❌ WRONG - Kaniko breaks SSH
+steps:
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    args:
+      - '--dockerfile=Dockerfile'
+      - '--destination=REGISTRY/IMAGE:TAG'
+```
+
+**Test Results**:
+
+| Version | Build Method | Changes | SSH Result |
+|---------|--------------|---------|------------|
+| v1.1.0-v1.5.0 | Kaniko | Various | ❌ Failed |
+| v2.2.0 | Docker | Ultra-minimal (just FROM) | ✅ Works |
+| v2.4.0 | Docker | ENV variable only | ✅ Works |
+| v2.5.0 | Docker | RUN without USER switching | ✅ Works |
+| v2.6.0 | Docker | Terraform with sudo | ✅ Works |
+| v2.7.0 | Docker | Terraform + startup script | ✅ Works |
+
+### 8. Cloud Build Machine Type
 
 **Problem**: Default Cloud Build machine type is slow for large base images.
 
@@ -377,12 +445,16 @@ gcloud workstations configs update wks-config \
 
 ### Issue: SSH fails with "No server on port 22"
 
-**Cause**: Workstation container isn't starting properly.
+**Cause**: One of these issues:
+1. Kaniko was used to build the image (most common)
+2. USER switching was used in the Dockerfile
+3. Workstation container isn't starting properly
 
-**Solution**: 
-1. Check if web IDE works first
-2. Check container startup logs
-3. Verify the custom image works
+**Solution**:
+1. **Switch to Docker builder**: Ensure `wks-image.sh` uses `gcr.io/cloud-builders/docker` instead of Kaniko
+2. **Remove USER switching**: Use `sudo` instead of `USER root` / `USER 1000`
+3. Check if web IDE works (if it does, SSH should work too)
+4. Restart workstation to pick up the new image: `./wks.sh restart wks1`
 
 ### Issue: Workstation stuck in STARTING state
 
@@ -446,3 +518,18 @@ gcloud workstations configs describe CONFIG \
 | v1.0.4 | 2024-12-18 | Minimal Dockerfile (removed apt-get, USER directives) |
 | v1.0.5 | 2024-12-18 | Renamed script to 120- prefix, added wait logic |
 | v1.0.6 | 2024-12-18 | Added permission fixes and directory creation |
+| v1.1.0-v1.5.0 | 2024-12-18 | Debugging SSH failures with Kaniko builds |
+| v2.0.0 | 2024-12-18 | **Switched from Kaniko to Docker builder** |
+| v2.2.0 | 2024-12-18 | Confirmed Docker builder works (ultra-minimal image) |
+| v2.4.0 | 2024-12-18 | Confirmed ENV variables work |
+| v2.5.0 | 2024-12-18 | Confirmed RUN commands work (without USER switching) |
+| v2.6.0 | 2024-12-18 | Added Terraform using sudo pattern |
+| v2.7.0 | 2024-12-18 | Added startup script for extension installation |
+
+### Key Breaking Change: Kaniko → Docker Builder
+
+In v2.0.0, we discovered that Kaniko does not properly preserve ENTRYPOINT/CMD metadata from Cloud Workstation base images, causing SSH to fail. The solution was to switch to the Docker builder (`gcr.io/cloud-builders/docker`).
+
+### Key Breaking Change: USER Switching → sudo
+
+Testing revealed that `USER root` / `USER 1000` switching in Dockerfiles breaks SSH. The solution is to use `sudo` for privileged commands while staying as the default user.
