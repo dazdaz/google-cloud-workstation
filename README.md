@@ -232,8 +232,8 @@ Generate a Dockerfile based on a predefined Cloud Workstations base image:
 
 | Flag | Description |
 |------|-------------|
-| `--local` | Build with Docker (default) |
-| `--cloud` | Build with Cloud Build |
+| `--local` | Build with Docker |
+| `--cloud` | Build with Cloud Build (default) |
 | `--platform` | Target: `amd64`, `arm64`, or `amd64,arm64` |
 | `--no-cache` | Build without cache |
 | `-t, --tag` | Image tag |
