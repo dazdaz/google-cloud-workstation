@@ -4,50 +4,13 @@
 - Google Cloud SDK (gcloud) installed and authenticated
 - An existing Cloud Workstations cluster and configuration
 
-## Setup (one-time)
-
-1. Configure your settings:
-   cp config.example.sh config.sh
-   vim config.sh  # Set your cluster, config, region
-
-2. Make scripts executable:
-   chmod +x wks.sh wks-image.sh
-
-## Basic Workstation Commands
-
-# List all workstations
-./wks.sh list
-
-# Start your workstation
-./wks.sh start wks1
-
-# SSH into workstation
+## Build Custom Image with Kilo Code AI
+./wks-image.sh scaffold --base code-oss
+vim Dockerfile
+./wks-image.sh deploy --tag v1.0.1
+./wks.sh restart wks1
 ./wks.sh ssh wks1
 
-# Stop workstation
-./wks.sh stop wks1
-
-## Build Custom Image with Kilo Code AI
-
-1. Generate Dockerfile (includes Kilo Code by default):
-   ./wks-image.sh scaffold --base code-oss
-
-2. (Optional) Edit Dockerfile to add more tools:
-   vim Dockerfile
-
-3. Build and deploy the image:
-   ./wks-image.sh deploy --tag v1.0.0
-
-4. Restart workstation to use new image:
-   ./wks.sh restart wks1
-
-## All-in-One Deployment
-
-# Build, push, and update config in one command:
-./wks-image.sh deploy --tag v1.0.0
-
-# Then restart your workstation:
-./wks.sh restart wks1
 
 ## Available Commands
 

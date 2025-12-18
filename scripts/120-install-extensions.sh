@@ -1,8 +1,7 @@
 #!/bin/bash
 # Install VS Code extensions on workstation startup
 # This script runs AFTER Code OSS starts (120 > 110)
-
-set -e
+# Note: Do NOT use set -e as it can prevent other services from starting
 
 EXTENSIONS_DIR="/home/user/.codeoss-cloudworkstations/extensions"
 

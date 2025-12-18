@@ -1,21 +1,24 @@
 # Google Cloud Workstations Custom Image
 # Base: code-oss (VS Code OSS)
 #
-# This is an example Dockerfile for creating a custom Cloud Workstations image.
-# Use `./workstation-image.sh scaffold --base <image>` to generate a new one.
+# IMPORTANT: This Dockerfile is designed to work with Cloud Workstations.
+# Key rules to follow:
+#   1. Do NOT use "USER root" / "USER 1000" switching - it breaks SSH!
+#   2. Use "sudo" for commands that need root privileges
+#   3. Use Docker builder (not Kaniko) in Cloud Build - already configured in wks-image.sh
+#
+# Use `./wks-image.sh scaffold --base <image>` to generate a new Dockerfile.
 #
 # Available base images:
 #   code-oss, base, intellij, pycharm, webstorm, goland, clion, rider, phpstorm, rubymine
 
 FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
 
-# Switch to root for installing packages
-USER root
-
 # =============================================================================
 # System packages (commonly needed)
+# Note: Use sudo for apt commands - do NOT use "USER root"
 # =============================================================================
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     # Essential tools
     curl \
     wget \
@@ -45,13 +48,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     silversearcher-ag \
     # Shell enhancements
     bash-completion \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && sudo apt-get clean \
+    && sudo rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # Build tools (optional - uncomment as needed)
 # =============================================================================
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     build-essential \
 #     gcc \
 #     g++ \
@@ -60,38 +63,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #     autoconf \
 #     automake \
 #     pkg-config \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # Additional languages and runtimes (optional - uncomment as needed)
 # =============================================================================
 
 # --- Java (OpenJDK) ---
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     openjdk-17-jdk \
 #     maven \
 #     gradle \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # --- .NET SDK ---
 # RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
 #     chmod +x dotnet-install.sh && \
 #     ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet && \
-#     ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet && \
+#     sudo ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet && \
 #     rm dotnet-install.sh
 # ENV DOTNET_ROOT=/usr/share/dotnet
 
 # --- Ruby ---
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     ruby-full \
 #     ruby-bundler \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # --- PHP ---
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     php \
 #     php-cli \
 #     php-curl \
@@ -100,8 +103,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #     php-xml \
 #     php-zip \
 #     composer \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # Node.js (via nvm) - optional
@@ -119,19 +122,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Go (specific version) - optional
 # =============================================================================
 # ARG GO_VERSION=1.22.0
-# RUN curl -LO https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
-#     rm -rf /usr/local/go && \
-#     tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-#     rm go${GO_VERSION}.linux-amd64.tar.gz
+# RUN sudo curl -LO https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
+#     sudo rm -rf /usr/local/go && \
+#     sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+#     sudo rm go${GO_VERSION}.linux-amd64.tar.gz
 # ENV PATH=$PATH:/usr/local/go/bin:/home/user/go/bin
 
 # =============================================================================
 # Rust - optional
 # =============================================================================
-# USER user
 # RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 # ENV PATH=$PATH:/home/user/.cargo/bin
-# USER root
 
 # =============================================================================
 # Python tools - optional (pip packages)
@@ -154,22 +155,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # =============================================================================
 
 # --- Google Cloud SDK components ---
-# RUN gcloud components install kubectl gke-gcloud-auth-plugin --quiet
+# RUN sudo gcloud components install kubectl gke-gcloud-auth-plugin --quiet
 
 # --- Kubernetes tools ---
 # ARG KUBECTL_VERSION=1.29.0
-# RUN curl -LO "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
-#     chmod +x kubectl && mv kubectl /usr/local/bin/
+# RUN sudo curl -LO "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
+#     sudo chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
 # --- Helm ---
-# RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+# RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash
 
 # --- Terraform ---
 # ARG TERRAFORM_VERSION=1.7.0
-# RUN curl -LO https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
-#     unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
-#     mv terraform /usr/local/bin/ && \
-#     rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+# RUN sudo curl -LO https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+#     sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin/ && \
+#     sudo rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
 # --- Pulumi ---
 # RUN curl -fsSL https://get.pulumi.com | sh
@@ -178,47 +178,48 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --- AWS CLI ---
 # RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
 #     unzip awscliv2.zip && \
-#     ./aws/install && \
+#     sudo ./aws/install && \
 #     rm -rf awscliv2.zip aws
 
 # --- Azure CLI ---
-# RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+# RUN curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
 # =============================================================================
 # Container tools - optional
 # =============================================================================
 
 # --- Docker CLI (for Docker-in-Docker) ---
-# RUN curl -fsSL https://get.docker.com | sh && \
-#     usermod -aG docker user
+# RUN curl -fsSL https://get.docker.com | sudo sh && \
+#     sudo usermod -aG docker user
 
 # --- Podman ---
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     podman \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # --- Skopeo (container image tool) ---
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     skopeo \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # Database clients - optional
 # =============================================================================
-# RUN apt-get update && apt-get install -y --no-install-recommends \
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 #     postgresql-client \
 #     mysql-client \
 #     redis-tools \
 #     mongodb-clients \
-#     && apt-get clean \
-#     && rm -rf /var/lib/apt/lists/*
+#     && sudo apt-get clean \
+#     && sudo rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # VS Code extensions (for code-oss base) - optional
 # =============================================================================
-# Note: Extensions are typically installed at runtime, but you can pre-install:
+# Note: Extensions are typically installed at runtime via startup scripts
+# See scripts/120-install-extensions.sh for examples
 # RUN code-oss-cloud-workstations --install-extension ms-python.python
 # RUN code-oss-cloud-workstations --install-extension golang.go
 # RUN code-oss-cloud-workstations --install-extension ms-azuretools.vscode-docker
@@ -235,27 +236,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # =============================================================================
 
 # --- Oh My Zsh ---
-# RUN apt-get update && apt-get install -y zsh && \
-#     apt-get clean && rm -rf /var/lib/apt/lists/*
-# USER user
+# RUN sudo apt-get update && sudo apt-get install -y zsh && \
+#     sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 # RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-# USER root
 
 # --- Starship prompt ---
-# RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
+# RUN curl -sS https://starship.rs/install.sh | sudo sh -s -- -y
 
 # --- fzf (fuzzy finder) ---
 # RUN git clone --depth 1 https://github.com/junegunn/fzf.git /home/user/.fzf && \
-#     /home/user/.fzf/install --all && \
-#     chown -R user:user /home/user/.fzf
+#     /home/user/.fzf/install --all
 
 # --- bat (better cat) ---
-# RUN apt-get update && apt-get install -y --no-install-recommends bat && \
-#     apt-get clean && rm -rf /var/lib/apt/lists/*
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends bat && \
+#     sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 
 # --- exa/eza (better ls) ---
-# RUN apt-get update && apt-get install -y --no-install-recommends eza && \
-#     apt-get clean && rm -rf /var/lib/apt/lists/*
+# RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends eza && \
+#     sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # Custom configuration files - optional
@@ -275,7 +273,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # =============================================================================
 # Scripts in /etc/workstation-startup.d/ run at workstation start
 # COPY startup.sh /etc/workstation-startup.d/100-custom-startup.sh
-# RUN chmod +x /etc/workstation-startup.d/100-custom-startup.sh
+# RUN sudo chmod +x /etc/workstation-startup.d/100-custom-startup.sh
 
 # =============================================================================
 # Environment variables - optional
@@ -287,12 +285,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ENV TZ=UTC
 
 # =============================================================================
-# Fix permissions
+# Working directory
 # =============================================================================
-RUN chown -R user:user /home/user
-
-# Switch back to the default user
-USER user
-
-# Set the working directory
 WORKDIR /home/user
