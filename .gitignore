@@ -1,0 +1,26 @@
+# Build artifacts
+*.tar
+*.tar.gz
+
+# Cloud Build generated files
+cloudbuild.yaml
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-workspace
+
+# Logs
+*.log

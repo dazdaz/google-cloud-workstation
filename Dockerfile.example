@@ -1,0 +1,298 @@
+# Google Cloud Workstations Custom Image
+# Base: code-oss (VS Code OSS)
+#
+# This is an example Dockerfile for creating a custom Cloud Workstations image.
+# Use `./workstation-image.sh scaffold --base <image>` to generate a new one.
+#
+# Available base images:
+#   code-oss, base, intellij, pycharm, webstorm, goland, clion, rider, phpstorm, rubymine
+
+FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/code-oss:latest
+
+# Switch to root for installing packages
+USER root
+
+# =============================================================================
+# System packages (commonly needed)
+# =============================================================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Essential tools
+    curl \
+    wget \
+    git \
+    vim \
+    nano \
+    jq \
+    unzip \
+    zip \
+    tar \
+    gzip \
+    # Python 3 (required)
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Process and system tools
+    htop \
+    tree \
+    less \
+    # Network tools
+    net-tools \
+    dnsutils \
+    iputils-ping \
+    # Search tools
+    ripgrep \
+    fd-find \
+    silversearcher-ag \
+    # Shell enhancements
+    bash-completion \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Build tools (optional - uncomment as needed)
+# =============================================================================
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     build-essential \
+#     gcc \
+#     g++ \
+#     make \
+#     cmake \
+#     autoconf \
+#     automake \
+#     pkg-config \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Additional languages and runtimes (optional - uncomment as needed)
+# =============================================================================
+
+# --- Java (OpenJDK) ---
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     openjdk-17-jdk \
+#     maven \
+#     gradle \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# --- .NET SDK ---
+# RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
+#     chmod +x dotnet-install.sh && \
+#     ./dotnet-install.sh --channel 8.0 --install-dir /usr/share/dotnet && \
+#     ln -s /usr/share/dotnet/dotnet /usr/local/bin/dotnet && \
+#     rm dotnet-install.sh
+# ENV DOTNET_ROOT=/usr/share/dotnet
+
+# --- Ruby ---
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     ruby-full \
+#     ruby-bundler \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# --- PHP ---
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     php \
+#     php-cli \
+#     php-curl \
+#     php-json \
+#     php-mbstring \
+#     php-xml \
+#     php-zip \
+#     composer \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Node.js (via nvm) - optional
+# =============================================================================
+# ENV NVM_DIR=/home/user/.nvm
+# RUN mkdir -p $NVM_DIR && \
+#     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && \
+#     . $NVM_DIR/nvm.sh && \
+#     nvm install 20 && \
+#     nvm alias default 20 && \
+#     npm install -g yarn pnpm typescript ts-node
+# ENV PATH=$NVM_DIR/versions/node/v20/bin:$PATH
+
+# =============================================================================
+# Go (specific version) - optional
+# =============================================================================
+# ARG GO_VERSION=1.22.0
+# RUN curl -LO https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
+#     rm -rf /usr/local/go && \
+#     tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+#     rm go${GO_VERSION}.linux-amd64.tar.gz
+# ENV PATH=$PATH:/usr/local/go/bin:/home/user/go/bin
+
+# =============================================================================
+# Rust - optional
+# =============================================================================
+# USER user
+# RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# ENV PATH=$PATH:/home/user/.cargo/bin
+# USER root
+
+# =============================================================================
+# Python tools - optional (pip packages)
+# =============================================================================
+# RUN pip3 install --no-cache-dir \
+#     ipython \
+#     jupyter \
+#     jupyterlab \
+#     black \
+#     flake8 \
+#     mypy \
+#     pytest \
+#     pytest-cov \
+#     poetry \
+#     pipenv \
+#     virtualenv
+
+# =============================================================================
+# Cloud & DevOps tools - optional
+# =============================================================================
+
+# --- Google Cloud SDK components ---
+# RUN gcloud components install kubectl gke-gcloud-auth-plugin --quiet
+
+# --- Kubernetes tools ---
+# ARG KUBECTL_VERSION=1.29.0
+# RUN curl -LO "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
+#     chmod +x kubectl && mv kubectl /usr/local/bin/
+
+# --- Helm ---
+# RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# --- Terraform ---
+# ARG TERRAFORM_VERSION=1.7.0
+# RUN curl -LO https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+#     unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+#     mv terraform /usr/local/bin/ && \
+#     rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+# --- Pulumi ---
+# RUN curl -fsSL https://get.pulumi.com | sh
+# ENV PATH=$PATH:/home/user/.pulumi/bin
+
+# --- AWS CLI ---
+# RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+#     unzip awscliv2.zip && \
+#     ./aws/install && \
+#     rm -rf awscliv2.zip aws
+
+# --- Azure CLI ---
+# RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# =============================================================================
+# Container tools - optional
+# =============================================================================
+
+# --- Docker CLI (for Docker-in-Docker) ---
+# RUN curl -fsSL https://get.docker.com | sh && \
+#     usermod -aG docker user
+
+# --- Podman ---
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     podman \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# --- Skopeo (container image tool) ---
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     skopeo \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Database clients - optional
+# =============================================================================
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     postgresql-client \
+#     mysql-client \
+#     redis-tools \
+#     mongodb-clients \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# VS Code extensions (for code-oss base) - optional
+# =============================================================================
+# Note: Extensions are typically installed at runtime, but you can pre-install:
+# RUN code-oss-cloud-workstations --install-extension ms-python.python
+# RUN code-oss-cloud-workstations --install-extension golang.go
+# RUN code-oss-cloud-workstations --install-extension ms-azuretools.vscode-docker
+# RUN code-oss-cloud-workstations --install-extension hashicorp.terraform
+# RUN code-oss-cloud-workstations --install-extension redhat.vscode-yaml
+# RUN code-oss-cloud-workstations --install-extension esbenp.prettier-vscode
+# RUN code-oss-cloud-workstations --install-extension dbaeumer.vscode-eslint
+# RUN code-oss-cloud-workstations --install-extension ms-vscode.makefile-tools
+# RUN code-oss-cloud-workstations --install-extension rust-lang.rust-analyzer
+# RUN code-oss-cloud-workstations --install-extension bradlc.vscode-tailwindcss
+
+# =============================================================================
+# Shell enhancements - optional
+# =============================================================================
+
+# --- Oh My Zsh ---
+# RUN apt-get update && apt-get install -y zsh && \
+#     apt-get clean && rm -rf /var/lib/apt/lists/*
+# USER user
+# RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+# USER root
+
+# --- Starship prompt ---
+# RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
+
+# --- fzf (fuzzy finder) ---
+# RUN git clone --depth 1 https://github.com/junegunn/fzf.git /home/user/.fzf && \
+#     /home/user/.fzf/install --all && \
+#     chown -R user:user /home/user/.fzf
+
+# --- bat (better cat) ---
+# RUN apt-get update && apt-get install -y --no-install-recommends bat && \
+#     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# --- exa/eza (better ls) ---
+# RUN apt-get update && apt-get install -y --no-install-recommends eza && \
+#     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Custom configuration files - optional
+# =============================================================================
+# COPY .bashrc /home/user/.bashrc
+# COPY .zshrc /home/user/.zshrc
+# COPY .vimrc /home/user/.vimrc
+# COPY .gitconfig /home/user/.gitconfig
+# COPY .tmux.conf /home/user/.tmux.conf
+
+# VS Code settings (for code-oss)
+# COPY settings.json /home/user/.codeoss-cloudworkstations/data/Machine/settings.json
+# COPY keybindings.json /home/user/.codeoss-cloudworkstations/data/User/keybindings.json
+
+# =============================================================================
+# Startup scripts - optional
+# =============================================================================
+# Scripts in /etc/workstation-startup.d/ run at workstation start
+# COPY startup.sh /etc/workstation-startup.d/100-custom-startup.sh
+# RUN chmod +x /etc/workstation-startup.d/100-custom-startup.sh
+
+# =============================================================================
+# Environment variables - optional
+# =============================================================================
+# ENV EDITOR=vim
+# ENV VISUAL=vim
+# ENV LANG=en_US.UTF-8
+# ENV LC_ALL=en_US.UTF-8
+# ENV TZ=UTC
+
+# =============================================================================
+# Fix permissions
+# =============================================================================
+RUN chown -R user:user /home/user
+
+# Switch back to the default user
+USER user
+
+# Set the working directory
+WORKDIR /home/user
