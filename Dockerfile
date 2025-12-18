@@ -16,9 +16,9 @@ RUN curl -LO https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terra
     mv terraform /usr/local/bin/ && \
     rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
-# Switch back to user
-USER 1000
-
-# Copy startup script for VS Code extensions
+# Copy startup script for VS Code extensions (as root for proper ownership)
 # Named 120 to run AFTER 110_start-code-oss.sh (- sorts before _)
 COPY --chmod=755 scripts/120-install-extensions.sh /etc/workstation-startup.d/120-install-extensions.sh
+
+# Switch back to default user
+USER 1000

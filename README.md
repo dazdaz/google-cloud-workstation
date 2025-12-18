@@ -5,23 +5,23 @@ Shell scripts to manage Google Cloud Workstations and custom container images fr
 ## Features
 
 ### Workstation Management (`wks.sh`)
-- **Start** - Start an existing workstation
-- **Stop** - Stop a running workstation
-- **Restart** - Restart a workstation
-- **Create** - Create a new workstation
-- **Delete** - Delete a workstation
-- **SSH** - SSH into a running workstation
-- **Status** - Check workstation status
-- **List** - List all workstations
+- **start** - Start an existing workstation
+- **stop** - Stop a running workstation
+- **restart** - Restart a workstation
+- **create** - Create a new workstation
+- **delete** - Delete a workstation
+- **ssh** - SSH into a running workstation
+- **status** - Check workstation status
+- **list** - List all workstations
 
 ### Custom Image Management (`wks-image.sh`)
-- **Scaffold** - Generate a Dockerfile from predefined base images
-- **Build** - Build images locally (Docker) or remotely (Cloud Build)
-- **Push** - Push images to Artifact Registry
-- **Update-config** - Update workstation config to use a custom image
-- **Deploy** - Build + Push + Update in one command
-- **List** - List images in the registry
-- **Multi-arch** - Support for amd64, arm64, or both
+- **scaffold** - Generate a Dockerfile from predefined base images
+- **build** - Build images locally (Docker) or remotely (Cloud Build)
+- **push** - Push images to Artifact Registry
+- **update-config** - Update workstation config to use a custom image
+- **deploy** - Build + Push + Update in one command
+- **list** - List images in the registry
+- **multi-arch** - Support for amd64, arm64, or both
 
 ## Prerequisites
 
