@@ -193,18 +193,18 @@ Generate a Dockerfile based on a predefined Cloud Workstations base image:
 
 #### Available Base Images
 
-| Name | Description |
-|------|-------------|
-| `code-oss` | VS Code OSS (default) |
-| `base` | Minimal base image |
-| `intellij` | IntelliJ IDEA Ultimate |
-| `pycharm` | PyCharm Professional |
-| `webstorm` | WebStorm |
-| `goland` | GoLand |
-| `clion` | CLion |
-| `rider` | Rider |
-| `phpstorm` | PHPStorm |
-| `rubymine` | RubyMine |
+| Name | Description | Documentation |
+|------|-------------|---------------|
+| `code-oss` | VS Code OSS (default) | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#code-oss) |
+| `base` | Minimal base image | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#base-image) |
+| `intellij` | IntelliJ IDEA Ultimate | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#intellij) |
+| `pycharm` | PyCharm Professional | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#pycharm) |
+| `webstorm` | WebStorm | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#webstorm) |
+| `goland` | GoLand | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#goland) |
+| `clion` | CLion | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#clion) |
+| `rider` | Rider | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#rider) |
+| `phpstorm` | PHPStorm | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#phpstorm) |
+| `rubymine` | RubyMine | [Docs](https://cloud.google.com/workstations/docs/preconfigured-base-images#rubymine) |
 
 ### Build an Image
 
