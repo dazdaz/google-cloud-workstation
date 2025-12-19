@@ -34,6 +34,12 @@ VERBOSE=false
 # Script name for help messages
 SCRIPT_NAME=$(basename "$0")
 
+# Browser paths for macOS
+BROWSER_CHROME="/Applications/Google Chrome.app"
+BROWSER_CHROME_CANARY="/Applications/Google Chrome Canary.app"
+BROWSER_FIREFOX="/Applications/Firefox.app"
+BROWSER_BRAVE="/Applications/Brave Browser.app"
+
 # =============================================================================
 # Helper Functions
 # =============================================================================
@@ -155,6 +161,108 @@ validate_params() {
     fi
 }
 
+# Prompt user to open URL in browser
+prompt_open_browser() {
+    local url="$1"
+    
+    # Build arrays of browser IDs and names
+    local browser_ids=()
+    local browser_names=()
+    
+    if [[ -d "$BROWSER_CHROME" ]]; then
+        browser_ids+=("chrome")
+        browser_names+=("Google Chrome")
+    fi
+    
+    if [[ -d "$BROWSER_CHROME_CANARY" ]]; then
+        browser_ids+=("canary")
+        browser_names+=("Google Chrome Canary")
+    fi
+    
+    if [[ -d "$BROWSER_FIREFOX" ]]; then
+        browser_ids+=("firefox")
+        browser_names+=("Firefox")
+    fi
+    
+    if [[ -d "$BROWSER_BRAVE" ]]; then
+        browser_ids+=("brave")
+        browser_names+=("Brave Browser")
+    fi
+    
+    if [[ ${#browser_ids[@]} -eq 0 ]]; then
+        print_warning "No supported browsers detected."
+        return 0
+    fi
+    
+    echo ""
+    read -p "Would you like to open the workstation in a browser? [y/N] " -n 1 -r
+    echo
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    
+    # If only one browser, use it directly
+    if [[ ${#browser_ids[@]} -eq 1 ]]; then
+        open_in_browser "${browser_ids[0]}" "$url"
+        return 0
+    fi
+    
+    # Multiple browsers - let user choose
+    echo ""
+    print_info "Available browsers:"
+    local i=1
+    for name in "${browser_names[@]}"; do
+        echo "  $i) $name"
+        i=$((i + 1))
+    done
+    echo ""
+    
+    read -p "Select a browser [1-${#browser_ids[@]}]: " -r choice
+    
+    # Validate choice
+    if [[ ! "$choice" =~ ^[0-9]+$ ]] || [[ "$choice" -lt 1 ]] || [[ "$choice" -gt ${#browser_ids[@]} ]]; then
+        print_warning "Invalid selection. Skipping browser launch."
+        return 0
+    fi
+    
+    local selected_id="${browser_ids[$((choice - 1))]}"
+    open_in_browser "$selected_id" "$url"
+}
+
+# Open URL in specified browser
+open_in_browser() {
+    local browser_id="$1"
+    local url="$2"
+    local app_name=""
+    
+    case "$browser_id" in
+        chrome)
+            app_name="Google Chrome"
+            ;;
+        canary)
+            app_name="Google Chrome Canary"
+            ;;
+        firefox)
+            app_name="Firefox"
+            ;;
+        brave)
+            app_name="Brave Browser"
+            ;;
+        *)
+            print_error "Unknown browser: $browser_id"
+            return 1
+            ;;
+    esac
+    
+    print_info "Opening in $app_name..."
+    if open -a "$app_name" "$url" 2>/dev/null; then
+        print_success "Browser launched successfully."
+    else
+        print_error "Failed to open browser. You can manually open: $url"
+    fi
+}
+
 # Build common gcloud flags
 build_gcloud_flags() {
     local flags="--cluster=$CLUSTER --config=$CONFIG --region=$REGION"
@@ -211,7 +319,8 @@ cmd_start() {
                 # Get the workstation URL
                 local host=$(gcloud workstations describe "$WORKSTATION_NAME" $flags --format="value(host)" 2>/dev/null || echo "")
                 if [[ -n "$host" ]]; then
-                    print_info "Web URL:     https://$host"
+                    local web_url="https://$host"
+                    print_info "Web URL:     $web_url"
                 fi
                 
                 # Print the SSH command
@@ -221,6 +330,12 @@ cmd_start() {
                 fi
                 print_info "SSH command: $ssh_cmd"
                 print_info "        or:  $SCRIPT_NAME ssh $WORKSTATION_NAME"
+                
+                # Offer to open in browser
+                if [[ -n "${web_url:-}" ]]; then
+                    prompt_open_browser "$web_url"
+                fi
+                
                 return 0
             fi
             printf "."
