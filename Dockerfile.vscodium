@@ -1,0 +1,147 @@
+# Google Cloud Workstations Custom Image - VSCodium
+# Installs the actual VSCodium (https://vscodium.com/) with noVNC for web access
+#
+# VSCodium is a community-driven, freely-licensed binary distribution of
+# Microsoft's VS Code editor without Microsoft's telemetry/tracking.
+#
+# IMPORTANT: This Dockerfile is designed to work with Cloud Workstations.
+# Key rules to follow:
+#   1. Do NOT use "USER root" / "USER 1000" switching - it breaks SSH!
+#   2. Use "sudo" for commands that need root privileges
+#   3. Use Docker builder (not Kaniko) in Cloud Build
+
+FROM us-central1-docker.pkg.dev/cloud-workstations-images/predefined/base:latest
+
+# =============================================================================
+# System dependencies
+# =============================================================================
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    git \
+    ca-certificates \
+    vim \
+    nano \
+    jq \
+    unzip \
+    zip \
+    tar \
+    gzip \
+    htop \
+    tree \
+    less \
+    bash-completion \
+    gnupg \
+    apt-transport-https \
+    && sudo apt-get clean \
+    && sudo rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# X11, VNC, and noVNC for web-based desktop access
+# =============================================================================
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
+    xvfb \
+    x11vnc \
+    novnc \
+    websockify \
+    fluxbox \
+    dbus-x11 \
+    libgtk-3-0 \
+    libnotify4 \
+    libnss3 \
+    libxss1 \
+    libasound2t64 \
+    libsecret-1-0 \
+    libgbm1 \
+    libxkbfile1 \
+    xdg-utils \
+    xdotool \
+    x11-utils \
+    xclip \
+    xsel \
+    autocutsel \
+    && sudo apt-get clean \
+    && sudo rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# VSCodium Installation (from https://vscodium.com/)
+# =============================================================================
+RUN wget -qO - https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg \
+    | sudo gpg --dearmor \
+    | sudo dd of=/usr/share/keyrings/vscodium-archive-keyring.gpg && \
+    echo 'deb [ signed-by=/usr/share/keyrings/vscodium-archive-keyring.gpg ] https://download.vscodium.com/debs vscodium main' \
+    | sudo tee /etc/apt/sources.list.d/vscodium.list && \
+    sudo apt-get update && \
+    sudo apt-get install -y codium && \
+    sudo apt-get clean && \
+    sudo rm -rf /var/lib/apt/lists/*
+
+# Create VSCodium user data directories
+RUN mkdir -p /home/user/.config/VSCodium/User \
+    && mkdir -p /home/user/.vscode-oss/extensions
+
+# =============================================================================
+# Default VSCodium settings
+# =============================================================================
+RUN echo '{\n\
+    "telemetry.telemetryLevel": "off",\n\
+    "workbench.colorTheme": "Default Dark Modern",\n\
+    "editor.fontSize": 14,\n\
+    "editor.tabSize": 2,\n\
+    "editor.formatOnSave": true,\n\
+    "files.autoSave": "afterDelay",\n\
+    "files.autoSaveDelay": 1000,\n\
+    "window.titleBarStyle": "custom"\n\
+}' > /home/user/.config/VSCodium/User/settings.json
+
+# =============================================================================
+# noVNC configuration
+# Note: index.html is created by the startup script with auto-connect settings
+# =============================================================================
+RUN sudo mkdir -p /opt/novnc
+
+# =============================================================================
+# Startup scripts
+# =============================================================================
+COPY scripts/200-start-vscodium.sh /etc/workstation-startup.d/200-start-vscodium.sh
+RUN sudo chmod +x /etc/workstation-startup.d/200-start-vscodium.sh
+
+# Extension installation script - installs Kilo Code and other extensions
+COPY scripts/220-install-vscodium-extensions.sh /etc/workstation-startup.d/220-install-vscodium-extensions.sh
+RUN sudo chmod +x /etc/workstation-startup.d/220-install-vscodium-extensions.sh
+
+# =============================================================================
+# Cloud & DevOps tools (optional - uncomment as needed)
+# =============================================================================
+
+# --- Terraform ---
+ARG TERRAFORM_VERSION=1.7.0
+RUN sudo curl -LO https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+    sudo unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip -d /usr/local/bin/ && \
+    sudo rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+# --- kubectl and gke-gcloud-auth-plugin ---
+RUN sudo apt-get update && \
+    sudo apt-get install -y kubectl google-cloud-cli-gke-gcloud-auth-plugin && \
+    sudo apt-get clean && \
+    sudo rm -rf /var/lib/apt/lists/*
+
+# --- Helm ---
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash
+
+# =============================================================================
+# Environment variables
+# =============================================================================
+ENV DISPLAY=:99
+ENV VNC_PORT=5900
+ENV NOVNC_PORT=80
+
+# =============================================================================
+# Working directory
+# =============================================================================
+WORKDIR /home/user
+
+# Expose ports
+# Port 80: noVNC web interface (Cloud Workstations expects this)
+# Port 5900: VNC (internal)
+EXPOSE 80 5900
